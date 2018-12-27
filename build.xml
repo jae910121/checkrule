@@ -1,0 +1,272 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!--
+This is Ant's build.xml.  It contains the rules for compiling the
+project.
+
+You need Ant to compile this.  Get it from
+http://jakarta.apache.org/ant if you don't have it.
+-->
+<project name="bpm" default="usage" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant">
+
+
+	<!-- =================================================================== -->
+	<!-- 帮助信息 -->
+	<!-- =================================================================== -->
+	<target name="usage">
+		<echo message="国华人寿核心系统ant build文件" />
+		<echo message="用法：ant -[target]" />
+		<echo message="------------------------------------------------------" />
+		<echo message="[target]" />
+		<echo message="clean            -->  清空所有输出文件包括build和部署目录" />
+		<echo message="compileAll       -->  编译所有java文件" />
+		<echo message="compile          -->  编译已修改java文件" />
+		<echo message="jar              -->  构建EIP的Jar包 " />
+		<echo message="client           -->  构建接口Jar包 " />
+		<echo message="------------------------------------------------------" />
+	</target>
+
+	<!-- =================================================================== -->
+	<!-- 变量设置 -->
+	<!-- =================================================================== -->
+	<!-- 设置 properties文件路径 -->
+	<property file="build.properties" />
+
+	<!-- set global properties for this build -->
+	<property name="project.name" value="${project.name}" />
+	<property name="project.version" value="${project.version}" />
+	<property name="debug" value="true" />
+	<property name="src" value="src/java" />
+	<property name="test" value="src/test" />
+	<property name="config" value="config" />
+	<property name="web" value="WebRoot" />
+	<property name="lib" value="${web}/WEB-INF/lib" />
+	<property name="classes" value="build/classes" />
+	<property name="cases" value="build/cases" />
+	<property name="release.dir" location="dist" />
+	<property name="report.dir" location="report" />
+	<property name="war.exploded.dir" location="${release.dir}/${project.name}" />
+	<property name="ear.exploded.dir" location="${release.dir}/weblogic/${project.name}" />
+	
+	<!-- set the ceompilation classpath -->
+	<path id="project.class.path">
+		<fileset dir="${lib}">
+			<include name="**/*.jar" />
+		</fileset>
+	</path>
+
+	<path id="project.case.path">
+		<fileset dir="${lib}">
+			<include name="**/*.jar" />
+		</fileset>
+		<pathelement location="${classes}" />
+	</path>
+
+	<target name="clean">
+		<delete dir="${classes}" />
+		<delete dir="${cases}" />
+		<delete dir="${release.dir}" />
+		<delete dir="${report.dir}" />
+	</target>
+
+	<!-- take care of any necessary setup -->
+	<target name="init" depends="clean">
+		<!-- Create the time stamp -->
+		<tstamp />
+		<!-- Create the build directory structure used by compile -->
+		<mkdir dir="${classes}" />
+		<mkdir dir="${cases}" />
+		<mkdir dir="${release.dir}" />
+	</target>
+
+	<!-- compile all the java classes -->
+	<target name="compileAll" depends="init" description="Just compile the java code">
+		<!-- Compile the java code from ${src} into ${classes} -->
+		<javac encoding="utf-8" deprecation="on" debug="${debug}" srcdir="${src}" destdir="${classes}" target="1.5">
+			<classpath refid="project.class.path" />
+		</javac>
+		<copy todir="${classes}">
+			<fileset dir="${src}">
+				<include name="**/*.xml" />
+				<include name="**/*.properties" />
+			</fileset>
+		</copy>
+
+	</target>
+
+	<!-- compile only modified files depends="get-lib"-->
+	<target name="compile" depends=""  description="Just compile the java code">
+		<!-- Compile the java code from ${src} into ${classes} -->
+		<javac encoding="utf-8" deprecation="on" debug="${debug}" srcdir="${src}" destdir="${classes}" target="1.5">
+			<classpath refid="project.class.path" />
+		</javac>
+		<copy todir="${classes}">
+			<fileset dir="${src}">
+				<include name="**/*.xml" />
+				<include name="**/*.properties" />
+			</fileset>
+		</copy>
+	</target>
+
+	<!-- =================================================================== -->
+	<!-- 清空第三方包本地缓存 -->
+	<!-- =================================================================== -->
+	<target name="clean-lib-cache" description="清空第三方包本地缓存">
+		<!--<delete dir="${user.home}/.ivy2" /> -->
+		<delete dir="${project.lib}/" />
+	</target>
+
+	<!-- =================================================================== -->
+	<!-- 设置第三方包下载配置文件 -->
+	<!-- =================================================================== -->
+	<target name="configure-lib" description="设置第三方包配置文件">
+		<ivy:configure file="${ivy.config.url}" />
+	</target>
+
+	<!-- =================================================================== -->
+	<!-- 下载或从本地缓存获取第三方包 -->
+	<!-- =================================================================== -->
+	<target name="get-lib" depends="init, configure-lib, clean-lib-cache" description="下载或从本地缓存获取第三方包">
+		<ivy:retrieve pattern="${project.lib}/[artifact].[ext]" />
+	</target>
+
+	<!-- =================================================================== -->
+	<!-- 打jar包 -->
+	<!-- =================================================================== -->
+	<target name="jar" depends="compileAll" description="构建Jar包 ">
+		<copy todir="${classes}" failonerror="false">
+			<fileset dir="${src}">
+				<exclude name="**/*.java" />
+			</fileset>
+		</copy>
+		<delete file="${classes}/config/applicationContext.xml" />
+		<delete file="${classes}/config/config.properties" />
+		<delete file="${classes}/config/db.properties" />
+		<tstamp />
+		<jar jarfile="${release.dir}/gh-${project.name}-${project.version}-${DSTAMP}.jar" basedir="${classes}">
+			<manifest>
+				<attribute name="Version" value="${project.version}" />
+				<attribute name="CreateTime" value="${TODAY}" />
+			</manifest>
+		</jar>
+	</target>
+
+	<target name="javadoc" description="Generate JavaDoc API docs">
+		<delete dir="javadoc" />
+		<javadoc sourcepath="${src}" destdir="javadoc/api" encoding="UTF-8" docencoding="UTF-8"
+			packagenames="*" 
+			author="true" 
+			private="true" 
+			windowtitle="${project.name} API Documentation" 
+			doctitle="&lt;h1&gt;${project.name} Documentation (Version ${project.version})&lt;/h1&gt;" 
+			bottom="Copyright (C) 2011">
+			<classpath refid="project.class.path" />
+		</javadoc>
+	</target>
+
+	<target name="compileTest" depends="compileAll" description="compile test">
+		<javac encoding="utf-8" deprecation="on" debug="${debug}" srcdir="${test}" destdir="${cases}" target="1.5">
+			<classpath refid="project.case.path" />
+			<include name="**/*.java" />
+		</javac>
+	</target>
+
+	<target name="junit and report" depends="compileTest">
+		<mkdir dir="${report.dir}" />
+		<junit printsummary="on" fork="true" showoutput="true">
+			<classpath>
+				<fileset dir="${lib}">
+					<include name="**/*.jar" />
+				</fileset>
+				<pathelement location="${classes}" />
+				<pathelement location="${cases}" />
+			</classpath>
+			<formatter type="xml" />
+
+			<batchtest todir="${report.dir}">
+				<fileset dir="${cases}">
+					<exclude name="**/*BaseTester.class"/>
+					<include name="**/*Test*.*" />
+				</fileset>
+			</batchtest>
+		</junit>
+		<junitreport todir="${report.dir}">
+			<fileset dir="${report.dir}">
+				<include name="TEST-*.xml" />
+			</fileset>
+			<report format="frames" todir="${report.dir}" />
+		</junitreport>
+	</target>
+
+	<target name="client" depends="compileAll" description="构建接口Jar包 ">
+		<delete includeEmptyDirs="true" >
+			<fileset dir="${classes}">
+				<exclude name="**/credit/dto/**/*.class" />
+				<exclude name="**/order/dto/**/*.class" />
+				<exclude name="**/insurance/dto/**/*.class" />
+				<exclude name="**/asset/dto/**/*.class" />
+				<exclude name="**/voucher/dto/**/*.class" />
+				<exclude name="**/order/constants/*.class" />
+				<exclude name="**/credit/constants/**/*.class" />
+				<exclude name="**/insurance/constants/*.class" />
+				<exclude name="**/asset/constants/*.class" />
+				<exclude name="**/order/service/*.class" />
+				<exclude name="**/voucher/service/*.class" />
+				<exclude name="**/credit/service/**/*.class" />
+				<exclude name="**/insurance/service/*.class" />
+				<exclude name="**/asset/service/*.class" />
+				<exclude name="${config}/bpm/webservicesClient.xml" />
+			</fileset>
+		</delete>
+		<tstamp />
+		<jar jarfile="${release.dir}/gh-${project.name}-client-${project.version}-${DSTAMP}.jar" basedir="${classes}">
+			<manifest>
+				<attribute name="Version" value="${project.version}" />
+				<attribute name="CreateTime" value="${TODAY}" />
+			</manifest>
+		</jar>
+	</target>
+
+	<!-- =================================================================== -->
+	<!-- 发布 -->
+	<!-- =================================================================== -->
+	<target name="build" depends="compileAll">
+		<mkdir dir="${ear.exploded.dir}/${project.name}.war" />
+		<copy todir="${ear.exploded.dir}/${project.name}.war">
+			<fileset dir="${web}" />
+		</copy>
+
+		<copy todir="${ear.exploded.dir}/${project.name}.war/WEB-INF" overwrite="true">
+			<fileset dir="config/${project.config}/WEB-INF" />
+		</copy>
+
+		<copy todir="${ear.exploded.dir}/${project.name}.war/WEB-INF/classes" overwrite="true">
+			<fileset dir="build/classes" />
+		</copy>
+
+		<copy todir="${ear.exploded.dir}/${project.name}.war/WEB-INF/classes/config" overwrite="true">
+			<fileset dir="config/${project.config}/config" />
+		</copy>
+
+		<delete file="${release.dir}/${project.name}.war" />
+		<jar jarfile="${release.dir}/${project.name}.war" basedir="${ear.exploded.dir}/${project.name}.war">
+			<manifest>
+				<attribute name="Built-By" value="${user.name}" />
+				<attribute name="Specification-Version" value="${project.version}" />
+				<attribute name="CreateTime" value="${DSTAMP} ${TSTAMP}" />
+			</manifest>
+		</jar>
+		<delete dir="${release.dir}/weblogic" />
+	</target>
+
+	<target name="deploy" depends="build" description="发布 ">
+		<property name="host" value="${ssh.remote.host}" />
+		<property name="user" value="${ssh.remote.username}" />
+		<property name="pass" value="${ssh.remote.password}" />
+		<property name="app.dir" value="${ssh.remote.app.dir}" />
+		<tstamp />
+		<echo message="上传打包文件...开始" />
+		<scp file="${release.dir}/${project.name}.war" todir="${user}:${pass}@${host}:${app.dir}" trust="true" />
+		<echo message="上传打包文件...结束" />
+	</target>
+
+</project>

@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:p="http://www.springframework.org/schema/p" 
+       xmlns:jaxws="http://cxf.apache.org/jaxws"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans 
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/tx 
+       http://www.springframework.org/schema/tx/spring-tx.xsd
+       http://www.springframework.org/schema/context 
+       http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/aop
+       http://www.springframework.org/schema/aop/spring-aop.xsd
+       http://cxf.apache.org/jaxws http://cxf.apache.org/schemas/jaxws.xsd"
+       default-lazy-init="true">
+
+    <!-- properties配置文件 -->
+	<bean id="bpmPropertyConfigurer" class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="ignoreUnresolvablePlaceholders" value="true" />
+		<property name="locations">
+			<list>
+				<value>classpath:/config/config.properties</value>
+				<value>classpath:/config/db.properties</value>
+				<!-- <value>file:D://serverConfig.properties</value> -->
+			</list>
+		</property>
+	</bean>
+
+	<bean id="bpmProperties" class="org.springframework.beans.factory.config.PropertiesFactoryBean">
+        <property name="singleton" value="true"/>
+        <property name="properties">
+            <props>
+                <prop key="mq.producer.clientType">${mq.producer.clientType}</prop>
+                <prop key="mq.producer.serverAddress">${mq.producer.serverAddress}</prop>
+                <prop key="mq.producer.instanceName">${mq.producer.serverAddress}</prop>
+                <prop key="mq.producer.groupName">${mq.producer.groupName}</prop>
+                
+                <prop key="gh.ebiz.bpm.mq.orderSuccess.topic">${gh.ebiz.bpm.mq.orderSuccess.topic}</prop>
+                <prop key="gh.ebiz.bpm.mq.surrenderSuccess.topic">${gh.ebiz.bpm.mq.surrenderSuccess.topic}</prop>
+                <prop key="gh.ebiz.bpm.mq.policyThaw.topic">${gh.ebiz.bpm.mq.policyThaw.topic}</prop>
+            </props>
+        </property>
+    </bean>
+
+	<!-- 配置电商数据源 -->
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">		
+		<property name="driverClassName" value="${dataSource.driverClassName}" />
+		<property name="url">
+			<value>${dataSource.url}</value>
+		</property>
+		<property name="username">
+			<value>${dataSource.username}</value>
+		</property>
+		<property name="password">
+			<value>${dataSource.password}</value>
+		</property>
+        <property name="initialSize" value="20" />
+		<property name="maxActive" value="500" />
+		<property name="maxIdle" value="20" />
+		<property name="maxWait" value="500" />
+		<property name="defaultAutoCommit" value="true" />
+		<property name="removeAbandoned" value="true" />
+		<property name="removeAbandonedTimeout" value="60" />
+		<property name="testOnBorrow" value="true"/>  
+		<property name="validationQuery" value="select 1 from dual"/>  
+	</bean>	
+
+    <!-- 数据库事务策-->
+	<bean id="bpmTransactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+		<property name="rollbackOnCommitFailure" value="true" />
+		<property name="globalRollbackOnParticipationFailure" value="true" />
+	</bean>
+
+	<tx:advice id="bpmTxAdvice" transaction-manager="bpmTransactionManager">
+		<tx:attributes>
+			<tx:method name="save*" propagation="REQUIRED" />
+			<tx:method name="del*" propagation="REQUIRED" />
+			<tx:method name="update*" propagation="REQUIRED" />
+			<tx:method name="find*" read-only="true" />
+			<tx:method name="get*" read-only="true" />
+			<tx:method name="select*" read-only="true" />
+			<tx:method name="*" propagation="REQUIRED" />
+		</tx:attributes>
+	</tx:advice>
+	
+	<tx:advice id="assetTxAdvice" transaction-manager="bpmTransactionManager">
+		<tx:attributes>
+			<tx:method name="saveAssetAndHis" propagation="REQUIRES_NEW" />
+		</tx:attributes>
+	</tx:advice>
+	
+	<aop:config proxy-target-class="true">
+		<aop:advisor pointcut="execution(* com.guohualife.ebiz.common.service.*.*(..))" advice-ref="bpmTxAdvice" />
+		<aop:advisor pointcut="execution(* com.guohualife.ebiz.product.service.*.*(..))" advice-ref="bpmTxAdvice" />
+		<aop:advisor pointcut="execution(* com.guohualife.ebiz.bpm.service.*.*(..))" advice-ref="bpmTxAdvice" />
+	</aop:config>
+	
+	<!-- 配置支付数据源 -->
+	<bean id="paymentDataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">		
+		<property name="driverClassName" value="${paymentDataSource.driverClassName}" />
+		<property name="url">
+			<value>${paymentDataSource.url}</value>
+		</property>
+		<property name="username">
+			<value>${paymentDataSource.username}</value>
+		</property>
+		<property name="password">
+			<value>${paymentDataSource.password}</value>
+		</property>
+        <property name="initialSize" value="20" />
+		<property name="maxActive" value="500" />
+		<property name="maxIdle" value="20" />
+		<property name="maxWait" value="500" />
+		<property name="defaultAutoCommit" value="true" />
+		<property name="removeAbandoned" value="true" />
+		<property name="removeAbandonedTimeout" value="60" />
+		<property name="testOnBorrow" value="true"/>  
+		<property name="validationQuery" value="select 1 from dual"/>  
+	</bean>
+	
+	<bean id="paymemtTransactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="paymentDataSource" />
+		<property name="rollbackOnCommitFailure" value="true" />
+		<property name="globalRollbackOnParticipationFailure" value="true" />
+	</bean>
+
+	<tx:advice id="paymentTxAdvice" transaction-manager="paymemtTransactionManager">
+		<tx:attributes>
+			<tx:method name="save*" propagation="REQUIRED" />
+			<tx:method name="del*" propagation="REQUIRED" />
+			<tx:method name="update*" propagation="REQUIRED" />
+			<tx:method name="find*" read-only="true" />
+			<tx:method name="get*" read-only="true" />
+			<tx:method name="select*" read-only="true" />
+			<tx:method name="*" propagation="REQUIRED" />
+		</tx:attributes>
+	</tx:advice>
+	
+	<aop:config proxy-target-class="true">
+		<aop:advisor pointcut="execution(* com.guohualife.ebiz.bpm.service.*.*(..))" advice-ref="paymentTxAdvice" />
+	</aop:config>
+	
+	<!-- methodCacheAdvice -->
+	<bean id="methodCacheAdvice" class="com.guohualife.common.util.cache.MethodCacheInterceptor">
+		<property name="cachePattern" ref="bpmCachePattern" />
+		<property name="cacheNamespace" value="ebiz_property" />
+	</bean>
+	
+	<!-- memoryCacheAdvice -->	
+	<bean id="memCacheAdvice" class="com.guohualife.common.util.cache.MethodCacheInterceptor">
+		<property name="cachePattern" ref="bpmMemCachePattern" />
+	</bean>
+	 
+	<!-- lockAdvice -->	
+	<bean id="methodLockAdvice"
+		class="com.guohualife.common.util.lock.proxy.MethodLockInterceptor">
+		<property name="lock" ref="clusterLock" />
+	</bean>
+	
+	<aop:config proxy-target-class="true">
+		<aop:advisor pointcut="execution(* com.guohualife.ebiz.product.service.*.get*(..))"
+			advice-ref="methodCacheAdvice" />
+		<aop:advisor pointcut="execution(* com.guohualife.ebiz.common.config.service.*.get*(..))"
+			advice-ref="methodCacheAdvice" /> 
+		<aop:advisor pointcut="execution(* com.guohualife.ebiz.bpm.asset.bo.*.saveAssetAndHis*(..))"
+			advice-ref="methodLockAdvice" />
+	</aop:config>
+	
+	<bean id="bpmCachePattern"
+		class="com.guohualife.common.util.cache.patten.LocalCachePattern">
+		<property name="localCache" ref="ehCacheClient" />
+		
+	</bean>
+
+	<bean id="bpmMemCachePattern"
+		class="com.guohualife.common.util.cache.patten.RemoteCachePattern">
+		<property name="remoteCache" ref="memCacheClient" />
+	</bean>
+	
+	<!-- 加载配置文件 -->
+	<import resource="classpath:/config/edb/edbContext.xml" />
+	
+	<import resource="classpath:/config/common/commonContext.xml" />
+	<import resource="classpath:/config/product/productContext.xml" />
+	<import resource="classpath:/config/platform/platformContext.xml" />
+	<import resource="classpath:/config/cache/cacheContext.xml" />	
+	
+	<import resource="classpath:/config/customer/webservicesClient.xml" />
+	<import resource="classpath:/config/gateway/webservicesClient.xml" />
+	<import resource="classpath:/config/message/webservicesClient.xml" />
+	<import resource="classpath:/config/trace/webservicesClient.xml" />
+	<import resource="classpath:/config/ppf/webservicesClient.xml" />
+	
+	<import resource="classpath:/config/bpm/webservicesContext.xml" />
+	<import resource="classpath:/config/bpm/commonWebservicesContext.xml" />
+	<import resource="classpath:/config/bpm/productWebservicesContext.xml" />
+	<import resource="classpath:/config/bpm/quartzWebservicesContext.xml" />
+	<import resource="classpath:/config/bpm/bpmContext.xml" />
+	
+	<import resource="classpath:/config/mq/mqContext.xml" />
+
+	<import resource="classpath:/config/quartz/quartzContext.xml" />
+
+	<import resource="classpath:/config/lock/lockContext.xml" />
+	 
+</beans>

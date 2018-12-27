@@ -1,0 +1,238 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+        PUBLIC "-//Apache Software Foundation//DTD Apache SQL Map 2.0//EN"
+        "http://ibatis.apache.org/dtd/sql-map-2.dtd" >
+<sqlMap namespace="AssetDAOImpl">
+
+	<resultMap id="assetPrincipalResultMap" class="com.guohualife.edb.bpm.model.EbizAssetPrincipal" >
+    	<result column="PRINCIPAL_ID" property="principalId" jdbcType="DECIMAL" />
+   	 	<result column="ORDER_NO" property="orderNo" jdbcType="VARCHAR" />
+    	<result column="PRINCIPAL_AMOUNT" property="principalAmount" jdbcType="DECIMAL" />
+    	<result column="PRINCIPAL_DATE" property="principalDate" jdbcType="DATETIME" />
+    	<result column="CREATED_DATE" property="createdDate" jdbcType="DATETIME" />
+    	<result column="MODIFIED_DATE" property="modifiedDate" jdbcType="DATETIME" />
+    	<result column="CREATED_USER" property="createdUser" jdbcType="VARCHAR" />
+    	<result column="MODIFIED_USER" property="modifiedUser" jdbcType="VARCHAR" />
+    	<result column="IS_DELETE" property="isDelete" jdbcType="DECIMAL" />
+  	</resultMap>
+
+	<select id="getProductAsset" parameterClass="java.lang.Long"
+	remapResults="true" resultClass="com.guohualife.ebiz.bpm.asset.dto.AssetDTO">
+			select easset.product_code productCode,
+       			   eo.product_name productName,
+       			   nvl(sum(easset.invest_amount), 0) totalInvestAmount,
+       			   nvl(sum(easset.total_value), 0) totalAsset,
+       			   nvl(sum(easset.total_income), 0) totalIncome,
+       
+       			   nvl(sum(case
+                 	when to_char(easset.last_income_date, 'yyyy-MM-dd') = to_char(sysdate, 'yyyy-MM-dd') then
+                  		easset.last_income
+                 	else
+                  		0
+               		end),
+           		   0) recentIncome,
+           		   easset.product_type productType
+  			  from ebiz_order eo left join ebiz_asset easset on eo.order_no = easset.order_no
+ 			 where eo.order_status in ('04', '05')
+   			   and eo.customer_id = #customerId#
+
+ group by easset.product_code, easset.product_type, eo.product_name
+ order by easset.product_code desc
+	</select>
+	
+	<select id="getProductAssetByPage" parameterClass="com.guohualife.ebiz.bpm.asset.dto.AssetPageDTO"
+	remapResults="true" resultClass="com.guohualife.ebiz.bpm.asset.dto.AssetDTO">
+			<include refid="BpmBaseDAOImpl.prefixSql" />
+			select ea.product_code productCode,
+       			   ea.order_no orderNo,
+       			   eo.order_status orderStatus,
+       			   eo.product_name productName,
+       			   eoa.bank_name bankName,
+       			   eoa.bank_code bankCode,
+      	 		   substr(eoa.card_book_code,-4) cardBookCode,
+       		       ea.invest_amount totalInvestAmount,
+       			   nvl(ea.total_income,0) totalIncome,
+       			   nvl(ea.last_income,0) recentIncome,
+       			   nvl(ea.total_value,0) totalAsset,
+       			   ea.value_date valueDate,
+       			   ea.expiry_date expiryDate,
+       			   eo.success_date successDate,
+       			   ea.product_type productType,
+       			   eo.end_close_date endCloseDate
+  			  from ebiz_order eo, ebiz_order_account eoa, ebiz_asset ea
+ 		     where eo.order_no = ea.order_no
+   			   and eoa.order_no = eo.order_no
+   			   and eo.order_status in ('04', '05')
+   			   and ea.customer_id = #customerId#
+   			   and ea.product_code = #productCode#
+   			   order by eo.success_date desc
+   			   <include refid="BpmBaseDAOImpl.suffixSql" />
+	</select>
+
+	<select id="getDaliyIncomeByPage"
+		parameterClass="com.guohualife.ebiz.bpm.asset.dto.AssetPageDTO"
+		remapResults="true" resultClass="com.guohualife.ebiz.bpm.asset.dto.DaliyIncomeDTO">
+		<include refid="BpmBaseDAOImpl.prefixSql" />
+		select eo.order_no orderNo,
+       		   ead.income_date incomeDate,
+       		   nvl(ead.income,0) income, 
+       		   eo.product_code productCode,
+       		   eo.product_name productName
+  		  from ebiz_asset_detail ead, ebiz_order eo
+   	     where eo.customer_id = #customerId#
+   		   and eo.order_status in ('04', '05')
+   		   and ead.order_no = eo.order_no
+   		   order by ead.income_date desc
+   		   <include refid="BpmBaseDAOImpl.suffixSql" />
+    </select>
+
+	<select id="getTradeDetailByPage"
+		parameterClass="com.guohualife.ebiz.bpm.asset.dto.TradeDetailPageDTO" 
+		remapResults="true" resultClass="com.guohualife.ebiz.bpm.asset.dto.TradeDetailDTO">
+		<include refid="BpmBaseDAOImpl.prefixSql" />
+			select eo.product_code as productCode,
+               	   eo.product_name as productName,
+                   eo.order_no     as businessNo,
+                   eo.order_amount as amount,
+                   case 
+                   	when eo.order_status = '02' then '0'
+                   	when eo.order_status = '03' then '2'
+              	   	when eo.order_status = '04' then '1'
+              	   	when eo.order_status = '05' then '1'
+              	   	when eo.order_status = '06' then '1'
+              	   	when eo.order_status = '09' then '0'
+              	   end as status,
+              	   case
+              	    when eo.order_status = '02' then eo.commit_date
+              	    when eo.order_status = '03' then eo.commit_date
+              	   	when eo.order_status = '04' then eo.success_date    
+              	   	when eo.order_status = '05' then eo.success_date    
+              	   	when eo.order_status = '06' then eo.success_date
+              	   	when eo.order_status = '09' then eo.commit_date        
+                   end  as tradeDate,
+                   '1' as  tradeType
+          	  from ebiz_order eo
+         	 where eo.customer_id = #customerId#
+           	   and eo.order_status in ('02', '03', '04', '05', '06')
+        	   <isNotNull property="orderNo" removeFirstPrepend="true">
+        	   		and eo.order_no = #orderNo#
+        	   </isNotNull>
+        	   <isNotNull property="queryBeginDate" removeFirstPrepend="true">
+        	   		and eo.success_date >= #queryBeginDate#
+        	   </isNotNull>
+        	   <isNotNull property="queryEndDate" removeFirstPrepend="true">
+        	   		<![CDATA[ and eo.success_date <= #queryEndDate# ]]>
+        	   </isNotNull>
+        	 
+        	 union all
+        
+        	select eo.product_code      as productCode,
+               	   eo.product_name      as productName,
+               	   to_char(es.surrender_id)     	as businessNo,
+              	   es.surrender_amount  as amount,
+              	   case  
+              	   	when es.status = '0' then '2'
+              	   	when es.status = '4' then '2'
+              	   	when es.status = '1' then '1'
+              	   	when es.status = '3' then '0'
+              	   	when es.status = '2' then '0'
+              	   end as status,
+                   es.surrender_date    as tradeDate,
+                   '2' as  tradeType
+          	  from ebiz_surrender es, ebiz_order eo
+         	 where eo.customer_id = #customerId#
+           	   and es.order_no = eo.order_no
+           	   <isNotNull property="orderNo" removeFirstPrepend="true">
+        	   		and eo.order_no = #orderNo#
+        	   </isNotNull>
+        	   <isNotNull property="queryBeginDate" removeFirstPrepend="true">
+        	   		and es.surrender_date >= #queryBeginDate#
+        	   </isNotNull>
+        	   <isNotNull property="queryEndDate" removeFirstPrepend="true">
+        	   		<![CDATA[ and es.surrender_date <= #queryEndDate# ]]>
+        	   </isNotNull>
+ 		   order by tradeDate desc
+ 		<include refid="BpmBaseDAOImpl.suffixSql" />
+    </select>
+    
+    <select id="getTradeDetail"
+		parameterClass="com.guohualife.ebiz.bpm.asset.dto.TradeDetailPageDTO" 
+		remapResults="true" resultClass="com.guohualife.ebiz.bpm.asset.dto.TradeDetailDTO">
+			select eo.product_code as productCode,
+               	   eo.product_name as productName,
+                   eo.order_no     as businessNo,
+                   eo.order_amount as amount,
+                   case 
+                   	when eo.order_status = '02' then '0'
+                   	when eo.order_status = '03' then '2'
+              	   	when eo.order_status = '04' then '1'
+              	   	when eo.order_status = '05' then '1'
+              	   	when eo.order_status = '06' then '1'
+              	   	when eo.order_status = '09' then '0'
+              	   end as status,
+                   case
+              	    when eo.order_status = '02' then eo.commit_date
+              	    when eo.order_status = '03' then eo.commit_date
+              	   	when eo.order_status = '04' then eo.success_date    
+              	   	when eo.order_status = '05' then eo.success_date    
+              	   	when eo.order_status = '06' then eo.success_date
+              	   	when eo.order_status = '09' then eo.commit_date        
+                   end  as tradeDate,
+                   '1' as  tradeType
+          	  from ebiz_order eo
+         	 where eo.customer_id = #customerId#
+           	   and eo.order_status in ('02', '03', '04', '06', '09')
+        	   <isNotNull property="orderNo" removeFirstPrepend="true">
+        	   		and eo.order_no = #orderNo#
+        	   </isNotNull>
+        	   <isNotNull property="queryBeginDate" removeFirstPrepend="true">
+        	   		and eo.success_date >= #queryBeginDate#
+        	   </isNotNull>
+        	   <isNotNull property="queryEndDate" removeFirstPrepend="true">
+        	   		<![CDATA[ and eo.success_date <= #queryEndDate# ]]>
+        	   </isNotNull>
+        	 
+        	 union all
+        
+        	select eo.product_code      as productCode,
+               	   eo.product_name      as productName,
+               	   to_char(es.surrender_id)     	as businessNo,
+              	   es.surrender_amount  as amount,
+              	   case  
+              	   	when es.status = '0' then '2'
+              	   	when es.status = '4' then '2'
+              	   	when es.status = '1' then '1'
+              	   	when es.status = '3' then '0'
+              	   end as status,
+                   es.surrender_date    as tradeDate,
+                   '2' as  tradeType
+          	  from ebiz_surrender es, ebiz_order eo
+         	 where eo.customer_id = #customerId#
+           	   and es.order_no = eo.order_no
+           	   <isNotNull property="orderNo" removeFirstPrepend="true">
+        	   		and eo.order_no = #orderNo#
+        	   </isNotNull>
+        	   <isNotNull property="queryBeginDate" removeFirstPrepend="true">
+        	   		and es.surrender_date >= #queryBeginDate#
+        	   </isNotNull>
+        	   <isNotNull property="queryEndDate" removeFirstPrepend="true">
+        	   		<![CDATA[ and es.surrender_date <= #queryEndDate# ]]>
+        	   </isNotNull>
+ 		   order by tradeDate desc
+    </select>
+    
+    <select id="getLastAssetPrincipal"
+		parameterClass="java.util.HashMap"
+		remapResults="true" resultMap="assetPrincipalResultMap">
+		select eap.* from (
+			select *
+  		  from ebiz_asset_principal
+   	     where order_no = #orderNo#
+   		   and principal_date <![CDATA[ < ]]> #principalDate#
+   		   and is_delete = 0
+   		   order by principal_date desc ) eap
+   		where rownum = 1
+   		   
+    </select>
+    
+</sqlMap>

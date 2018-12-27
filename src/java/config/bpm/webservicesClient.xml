@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:jaxws="http://cxf.apache.org/jaxws"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/tx 
+       http://www.springframework.org/schema/tx/spring-tx.xsd
+       http://www.springframework.org/schema/context 
+       http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/aop
+       http://www.springframework.org/schema/aop/spring-aop.xsd
+       http://cxf.apache.org/jaxws http://cxf.apache.org/schemas/jaxws.xsd">
+
+	<bean id="clientLogInterceptor" class="com.guohualife.platform.common.api.webservice.advice.ClientLogInterceptor" />
+
+
+	<jaxws:client id="orderService"
+		serviceClass="com.guohualife.ebiz.bpm.order.service.OrderService"
+		address="${bpm.url}/bpm/api/orderService?wsdl">
+		<jaxws:outInterceptors>
+			<ref bean="clientLogInterceptor" />
+		</jaxws:outInterceptors>
+	</jaxws:client>
+	
+	<jaxws:client id="orderSurrenderService"
+		serviceClass="com.guohualife.ebiz.bpm.order.service.OrderSurrenderService"
+		address="${bpm.url}/bpm/api/orderSurrenderService?wsdl">
+		<jaxws:outInterceptors>
+			<ref bean="clientLogInterceptor" />
+		</jaxws:outInterceptors>
+	</jaxws:client>
+	
+	<jaxws:client id="insuranceService"
+		serviceClass="com.guohualife.ebiz.bpm.insurance.service.InsuranceService"
+		address="${bpm.url}/bpm/api/insuranceService?wsdl">
+		<jaxws:outInterceptors>
+			<ref bean="clientLogInterceptor" />
+		</jaxws:outInterceptors>
+	</jaxws:client>
+	
+	<jaxws:client id="insuranceAssetService"
+		serviceClass="com.guohualife.ebiz.bpm.insurance.service.InsuranceAssetService"
+		address="${bpm.url}/bpm/api/insuranceAssetService?wsdl">
+		<jaxws:outInterceptors>
+			<ref bean="clientLogInterceptor" />
+		</jaxws:outInterceptors>
+	</jaxws:client>
+	
+	<jaxws:client id="assetService"
+		serviceClass="com.guohualife.ebiz.bpm.asset.service.AssetService"
+		address="${bpm.url}/bpm/api/assetService?wsdl">
+		<jaxws:outInterceptors>
+			<ref bean="clientLogInterceptor" />
+		</jaxws:outInterceptors>
+	</jaxws:client>
+	
+	<jaxws:client id="creditService"
+		serviceClass="com.guohualife.ebiz.bpm.credit.service.CreditService"
+		address="${bpm.url}/bpm/api/creditService?wsdl">
+		<jaxws:outInterceptors>
+			<ref bean="clientLogInterceptor" />
+		</jaxws:outInterceptors>
+	</jaxws:client>
+	
+	<jaxws:client id="voucherService"
+		serviceClass="com.guohualife.ebiz.bpm.voucher.service.VoucherService"
+		address="${bpm.url}/bpm/api/voucherService?wsdl">
+		<jaxws:outInterceptors>
+			<ref bean="clientLogInterceptor" />
+		</jaxws:outInterceptors>
+	</jaxws:client>
+	
+</beans>

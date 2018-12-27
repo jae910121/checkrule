@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+        PUBLIC "-//Apache Software Foundation//DTD Apache SQL Map 2.0//EN"
+        "http://ibatis.apache.org/dtd/sql-map-2.dtd" >
+<sqlMap namespace="EbizSurrenderSPECDAOImpl">
+
+
+	<select
+        id="getSurrenderList"
+        parameterClass="java.util.HashMap"
+        remapResults="true"
+        resultClass="com.guohualife.edb.bpm.model.EbizSurrender" >
+		select es.*
+  		  from ebiz_surrender es, ebiz_order eo
+ 		 where eo.order_no = es.order_no
+   		   and eo.product_type = #productType#
+   		   and es.status in 
+   		   <iterate property="statusList" conjunction="," open="(" close=")">
+                    #statusList[]# 
+			</iterate>
+	</select>
+    
+</sqlMap>

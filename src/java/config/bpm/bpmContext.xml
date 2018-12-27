@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" xmlns:tx="http://www.springframework.org/schema/tx" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context" xmlns:aop="http://www.springframework.org/schema/aop" xmlns:p="http://www.springframework.org/schema/p" xsi:schemaLocation="http://www.springframework.org/schema/beans 
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/tx 
+       http://www.springframework.org/schema/tx/spring-tx.xsd
+       http://www.springframework.org/schema/context 
+       http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/aop
+       http://www.springframework.org/schema/aop/spring-aop.xsd"
+       default-lazy-init="true">
+
+	<bean id="SpringContext" class="com.guohualife.platform.common.api.context.SpringContext" lazy-init="false"></bean>
+
+	<!-- bpm -->
+	<context:component-scan base-package="com.guohualife.ebiz.bpm">
+		<context:include-filter type="regex" expression=".*DaoImpl" />
+		<context:include-filter type="regex" expression=".*DAOImpl" />
+		<context:include-filter type="regex" expression=".*ServiceImpl" />
+		<context:include-filter type="regex" expression=".*BoImpl" />
+		<context:include-filter type="regex" expression=".*BOImpl" />
+		<context:include-filter type="annotation" expression="org.springframework.stereotype.Component" />
+	</context:component-scan>
+	
+	<!-- 配置ibatis SqlMapClient -->
+	<bean id="bpmSqlMapClient" class="org.springframework.orm.ibatis.SqlMapClientFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="configLocation" value="classpath:/config/edb/bpmSqlMapConfig.xml" />
+		<property name="mappingLocations">
+			<list>
+				<value>classpath:/com/guohualife/edb/bpm/sqlmap/*.xml</value>
+				<value>classpath:/com/guohualife/ebiz/bpm/asset/dao/sqlmap/*.xml</value>
+				<value>classpath:/com/guohualife/ebiz/bpm/order/dao/sqlmap/*.xml</value>
+			</list>
+		</property>
+	</bean>
+	
+	<bean id="bpmSqlMapClientTemplate" class="org.springframework.orm.ibatis.SqlMapClientTemplate">
+		<property name="sqlMapClient" ref="bpmSqlMapClient" />
+	</bean>
+	
+	<bean id="paymentSqlMapClient" class="org.springframework.orm.ibatis.SqlMapClientFactoryBean">
+		<property name="dataSource" ref="paymentDataSource" />
+		<property name="configLocation" value="classpath:/config/edb/paymentSqlMapConfig.xml" />
+		<property name="mappingLocations">
+			<list>
+				<value>classpath:/com/guohualife/edb/payment/sqlmap/*.xml</value>
+			</list>
+		</property>
+	</bean>
+	
+	<bean id="paymentSqlMapClientTemplate" class="org.springframework.orm.ibatis.SqlMapClientTemplate">
+		<property name="sqlMapClient" ref="paymentSqlMapClient" />
+	</bean>
+</beans>
